@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Infoblox Release Notes Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #090E0C;
+  --bgCard:     #0F1612;
+  --bgActive:   #132019;
+  --bgHover:    #172618;
+  --border:     #1E3028;
+  --borderHi:   #2E5040;
+  --green:      #1AB87C;
+  --greenDark:  #138F5E;
+  --greenDim:   #072818;
+  --greenText:  #3DD68C;
+  --greenFaint: #0F2E1E;
+  --red:        #E05050;
+  --redDim:     #2E1010;
+  --amber:      #E0A030;
+  --amberDim:   #2E2010;
+  --blue:       #4090D0;
+  --blueDim:    #0A1E2E;
+  --teal:       #20C0A0;
+  --tealDim:    #0A2820;
+  --text:       #E8F5F0;
+  --textMuted:  #6A9E88;
+  --textFaint:  #2A5040;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --display: 'Barlow Condensed', 'DM Sans', system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--borderHi); }
+
+/* ── Animations ─────────────────────────────────────────────────────────── */
+@keyframes fadeUp   { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@keyframes spin     { to   { transform:rotate(360deg); } }
+@keyframes glow     { 0%,100%{opacity:.7} 50%{opacity:1} }
+
+/* ── Form elements ──────────────────────────────────────────────────────── */
+input[type=text], input[type=date], textarea, select {
+  background: var(--bgCard);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--sans);
+  font-size: 14px;
+  padding: 9px 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--greenDim);
+}
+input::placeholder, textarea::placeholder { color: var(--textFaint); }
+input[type=date] { color-scheme: dark; }
+input[type=checkbox] { width: auto; accent-color: var(--green); flex-shrink: 0; cursor: pointer; }
+select { background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%232A5040' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; cursor: pointer; }
+select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.app { max-width: 840px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bgCard);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 14px;
+  animation: fadeUp .35s ease;
+}
+.card.glow {
+  border-color: rgba(26,184,124,.33);
+  box-shadow: 0 0 0 1px var(--greenDim), 0 0 24px var(--greenDim);
+}
+
+/* ── Step header ────────────────────────────────────────────────────────── */
+.step-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.step-num {
+  width: 24px; height: 24px; border-radius: 4px;
+  background: var(--greenDim); color: var(--greenText);
+  font-size: 12px; font-weight: 700; font-family: var(--display);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-num.done { background: var(--green); color: #090E0C; }
+.step-label {
+  font-size: 11px; font-weight: 700; color: var(--textMuted);
+  text-transform: uppercase; letter-spacing: .1em; font-family: var(--display);
+}
+.step-line { flex: 1; height: 1px; background: var(--greenDim); margin-left: 4px; }
+
+/* ── Row / field ────────────────────────────────────────────────────────── */
+.row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.field label { font-size: 11px; color: var(--textMuted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.field-hint { font-size: 11px; color: var(--textFaint); margin-top: 2px; }
+.sel-wrap { position: relative; flex: 1; min-width: 0; }
+.sel-wrap select { width: 100%; }
+.sel-spinner { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  padding: 8px 16px; border-radius: 6px; border: none;
+  cursor: pointer; white-space: nowrap; transition: all .15s; letter-spacing: .01em;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary   { background: var(--green); color: #090E0C; font-weight: 700; }
+.btn-primary:hover:not(:disabled) { background: var(--greenDark); }
+.btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover:not(:disabled) { background: var(--bgActive); }
+.btn-ghost     { background: transparent; color: var(--textMuted); }
+.btn-ghost:hover:not(:disabled) { color: var(--text); }
+.btn-full { width: 100%; justify-content: center; padding: 13px; font-size: 15px; border-radius: 6px; }
+
+/* ── Badges ─────────────────────────────────────────────────────────────── */
+.badge {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+  white-space: nowrap; letter-spacing: .03em; text-transform: uppercase;
+}
+.badge-green  { background: var(--greenDim);  color: var(--greenText); }
+.badge-red    { background: var(--redDim);    color: var(--red); }
+.badge-amber  { background: var(--amberDim);  color: var(--amber); }
+.badge-blue   { background: var(--blueDim);   color: var(--blue); }
+.badge-teal   { background: var(--tealDim);   color: var(--teal); }
+.badge-muted  { background: #1A1E14;          color: var(--textMuted); }
+
+/* ── Alerts ─────────────────────────────────────────────────────────────── */
+.err-box { margin-top: 10px; background: var(--redDim); color: var(--red); border-radius: 6px; padding: 10px 14px; font-size: 13px; border: 1px solid rgba(224,80,80,.2); line-height: 1.5; display:none; }
+.err-box.show { display: block; }
+.info-box { margin-top: 10px; background: var(--blueDim); color: var(--blue); border-radius: 6px; padding: 10px 14px; font-size: 13px; line-height: 1.5; display:none; }
+.info-box.show { display: block; }
+
+/* ── Spinner ────────────────────────────────────────────────────────────── */
+.spinner {
+  width: 14px; height: 14px; border: 2px solid var(--border);
+  border-top-color: var(--green); border-radius: 50%;
+  animation: spin .7s linear infinite; flex-shrink: 0; display: inline-block;
+}
+.spinner-lg { width: 18px; height: 18px; }
+
+/* ── Source toggle ──────────────────────────────────────────────────────── */
+.source-toggle {
+  display: flex; gap: 8px; margin-bottom: 16px;
+  background: var(--bgCard); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px;
+}
+.source-tab {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer;
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  transition: all .15s; background: transparent; color: var(--textMuted);
+}
+.source-tab.active { background: var(--green); color: #090E0C; }
+.source-tab:not(.active):hover { background: var(--bgActive); color: var(--text); }
+
+/* ── Metric tiles ───────────────────────────────────────────────────────── */
+.metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 14px; }
+.metric-tile { background: var(--bgActive); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+.metric-val { font-size: 24px; font-weight: 700; line-height: 1; font-family: var(--display); }
+.metric-lbl { font-size: 12px; color: var(--textMuted); margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+
+/* ── Issue list ─────────────────────────────────────────────────────────── */
+.issue-list { display: flex; flex-direction: column; gap: 5px; max-height: 360px; overflow-y: auto; padding-right: 4px; }
+.issue-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border: 1px solid var(--border); border-left: 3px solid var(--border);
+  border-radius: 6px; cursor: pointer; background: var(--bgCard);
+  transition: all .12s;
+}
+.issue-row.selected { border-color: rgba(26,184,124,.33); border-left-color: var(--green); background: var(--greenFaint); }
+.issue-row:hover:not(.selected) { background: var(--bgHover); }
+.issue-key { font-size: 12px; color: var(--greenText); font-family: var(--mono); min-width: 80px; flex-shrink: 0; }
+.issue-summary { font-size: 13px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.issue-badges { display: flex; gap: 5px; flex-shrink: 0; align-items: center; }
+
+/* ── Drop zone ──────────────────────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--borderHi); border-radius: 8px; padding: 2.5rem 1.5rem;
+  text-align: center; cursor: pointer; transition: all .15s; background: var(--bgActive);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--green); background: var(--greenFaint);
+}
+.drop-zone-icon { margin: 0 auto 12px; display: block; }
+.drop-zone-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.drop-zone-sub { font-size: 13px; color: var(--textMuted); }
+.drop-zone-hint { font-size: 12px; color: var(--textFaint); margin-top: 12px; line-height: 1.7; }
+
+/* ── File pill ──────────────────────────────────────────────────────────── */
+.file-pill {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--greenFaint); border: 1px solid rgba(26,184,124,.27);
+  border-radius: 6px; padding: 10px 14px; margin-bottom: 16px;
+}
+.file-pill-name { font-size: 13px; color: var(--greenText); font-weight: 600; flex: 1; }
+.file-pill-meta { font-size: 12px; color: var(--textMuted); }
+.file-pill-close { background: none; border: none; color: var(--textFaint); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; }
+
+/* ── Style badge ────────────────────────────────────────────────────────── */
+.style-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--greenFaint); border: 1px solid rgba(26,184,124,.27);
+  border-radius: 6px; padding: 8px 14px; margin-bottom: 16px;
+}
+.style-badge-label { font-size: 12px; color: var(--greenText); font-weight: 600; }
+.style-badge-desc  { font-size: 12px; color: var(--textMuted); margin-left: 4px; }
+
+/* ── Output area ────────────────────────────────────────────────────────── */
+.output-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.output-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--green); animation: glow 2s ease-in-out infinite; }
+.output-label { font-size: 11px; font-weight: 700; color: var(--greenText); text-transform: uppercase; letter-spacing: .1em; font-family: var(--display); margin-left: 10px; }
+.output-pre {
+  font-family: var(--mono); font-size: 13px; line-height: 1.8; color: var(--text);
+  background: var(--bgActive); border-radius: 6px; padding: 1rem;
+  overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+  max-height: 520px; overflow-y: auto;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.app-header { margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+.header-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.header-title { display: flex; align-items: baseline; gap: 8px; }
+.header-title span:first-child { font-family: var(--display); font-size: 26px; font-weight: 700; color: var(--text); letter-spacing: .02em; }
+.header-title span:last-child  { font-family: var(--display); font-size: 26px; font-weight: 700; color: var(--green); letter-spacing: .02em; }
+.header-sub { font-size: 13px; color: var(--textMuted); margin-top: 2px; }
+.header-rule { height: 2px; background: linear-gradient(90deg, var(--green), var(--greenDim)); border-radius: 1px; }
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.app-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.app-footer span { font-size: 12px; color: var(--textFaint); }
+
+/* ── Active sprint badge ────────────────────────────────────────────────── */
+.active-sprint-badge {
+  background: var(--greenDim); color: var(--green); font-size: 10px; font-weight: 700;
+  padding: 1px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: .05em;
+  display: inline-block; margin-left: 6px;
+}
+
+/* ── Loading bar ────────────────────────────────────────────────────────── */
+.loading-row { display: flex; align-items: center; gap: 10px; color: var(--textMuted); font-size: 14px; padding: 8px 0; }
+
+/* ── Jira not connected hint ────────────────────────────────────────────── */
+.switch-mode-link { background: none; border: none; color: var(--green); cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: underline; padding: 0; }
+.no-match { padding: 2rem; text-align: center; color: var(--textFaint); font-size: 13px; }
+
+/* ── Checkbox label ─────────────────────────────────────────────────────── */
+.check-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--textMuted); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ── Header ──────────────────────────────────────────────────────── -->
+  <div class="app-header">
+    <div class="header-top">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 34,18 18,34 2,18" fill="#1AB87C"/>
+        <polygon points="18,8 28,18 18,28 8,18" fill="#090E0C"/>
+        <polygon points="18,13 23,18 18,23 13,18" fill="#1AB87C"/>
+      </svg>
+      <div>
+        <div class="header-title">
+          <span>RELEASE NOTES</span>
+          <span>GENERATOR</span>
+        </div>
+        <div class="header-sub">Infoblox · Jira-connected or import CSV / Excel · Infoblox house style AI generation</div>
+      </div>
+    </div>
+    <div class="header-rule"></div>
+  </div>
+
+  <!-- ── Source mode toggle ──────────────────────────────────────────── -->
+  <div class="source-toggle">
+    <button class="source-tab active" id="tab-jira" onclick="switchMode('jira')">
+      <svg width="16" height="16" viewBox="0 0 36 36" fill="none"><polygon points="18,2 34,18 18,34 2,18" fill="currentColor" opacity=".8"/><polygon points="18,9 27,18 18,27 9,18" fill="#090E0C"/><polygon points="18,14 22,18 18,22 14,18" fill="currentColor" opacity=".8"/></svg>
+      Connect to Jira
+    </button>
+    <button class="source-tab" id="tab-import" onclick="switchMode('import')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect width="16" height="16" rx="3" fill="currentColor" opacity=".15"/><path d="M8 2v8M4 7l4 4 4-4M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Import CSV / Excel
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       JIRA MODE
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="jira-section">
+
+    <!-- Step 1: Project / Sprint / Version -->
+    <div class="card" id="card-project">
+      <div class="step-header">
+        <div class="step-num" id="step1-num">1</div>
+        <div class="step-label">Select project &amp; sprint</div>
+      </div>
+
+      <div class="loading-row" id="proj-loading" style="display:none">
+        <div class="spinner"></div> Connecting to Jira and loading projects…
+      </div>
+      <div class="err-box" id="proj-error"></div>
+      <div class="info-box" id="proj-info"></div>
+
+      <div id="proj-fields" style="display:none">
+        <div class="row">
+          <div class="field">
+            <label id="proj-label">Jira project</label>
+            <div class="sel-wrap">
+              <select id="sel-project" onchange="onProjectChange()">
+                <option value="" disabled selected>Choose a project</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Sprint <span id="active-sprint-badge" class="active-sprint-badge" style="display:none"></span></label>
+            <div class="sel-wrap">
+              <select id="sel-sprint">
+                <option value="">All sprints</option>
+              </select>
+              <div class="sel-spinner" id="sprint-spinner" style="display:none"><div class="spinner" style="width:12px;height:12px"></div></div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Fix version</label>
+            <div class="sel-wrap">
+              <select id="sel-version">
+                <option value="">Any version</option>
+              </select>
+              <div class="sel-spinner" id="ver-spinner" style="display:none"><div class="spinner" style="width:12px;height:12px"></div></div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--textFaint);margin-bottom:12px" id="sprint-legend" style="display:none">★ active sprint · ○ future sprint · ✓ released version</div>
+      </div>
+
+      <label class="check-label" style="margin-top:4px">
+        <input type="checkbox" id="use-jql" onchange="toggleJql()" />
+        Override with custom JQL
+      </label>
+      <div id="jql-wrap" style="display:none;margin-top:10px">
+        <textarea id="custom-jql" rows="2" placeholder='e.g. project = "PROJ" AND sprint in openSprints() AND status = Done ORDER BY priority DESC' style="font-family:var(--mono);font-size:13px;resize:vertical"></textarea>
+      </div>
+    </div>
+
+    <!-- Step 2: Filters -->
+    <div class="card">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-label">Filters</div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Status</label>
+          <select id="j-status">
+            <option value="done">Done / Resolved / Closed</option>
+            <option value="released">Released</option>
+            <option value="all">All statuses</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Issue type</label>
+          <select id="j-type">
+            <option value="all">All types</option>
+            <option value="bug">Bugs only</option>
+            <option value="feature">Features, Stories &amp; Improvements</option>
+            <option value="no-epic">Exclude Epics</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Max issues</label>
+          <select id="j-max">
+            <option value="20">20</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="align-items:flex-end">
+        <div class="field"><label>Updated from</label><input type="date" id="j-from" /></div>
+        <div class="field"><label>Updated to</label><input type="date" id="j-to" /></div>
+        <button class="btn btn-primary" id="fetch-btn" onclick="fetchIssues()" style="flex-shrink:0;padding:9px 24px;font-size:14px">
+          Fetch issues →
+        </button>
+      </div>
+      <div class="err-box" id="fetch-error"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       IMPORT MODE
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="import-section" style="display:none">
+    <div class="card">
+      <div class="step-header">
+        <div class="step-num" id="import-step-num">1</div>
+        <div class="step-label">Import Jira export</div>
+      </div>
+
+      <!-- Drop zone -->
+      <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()"
+           ondrop="onDrop(event)" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)">
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFileSelect(event)" />
+        <svg class="drop-zone-icon" width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <rect width="40" height="40" rx="8" fill="var(--greenDim)"/>
+          <path d="M20 10v14M13 17l7-7 7 7M10 28h20" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="drop-zone-title">Drop your Jira export here</div>
+        <div class="drop-zone-sub">or click to browse · supports <strong style="color:var(--greenText)">.csv</strong>, <strong style="color:var(--greenText)">.xlsx</strong>, <strong style="color:var(--greenText)">.xls</strong></div>
+        <div class="drop-zone-hint">Export from Jira: <em>Issues → Export → Export Excel CSV (all fields)</em><br/>Columns auto-detected: Issue Key, Summary, Type, Status, Priority, Fix Version, Assignee</div>
+      </div>
+
+      <div class="loading-row" id="import-loading" style="display:none">
+        <div class="spinner"></div> Parsing file and extracting issues…
+      </div>
+      <div class="err-box" id="import-error"></div>
+
+      <!-- Imported file summary -->
+      <div id="import-summary" style="display:none">
+        <div class="file-pill">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect width="16" height="16" rx="3" fill="var(--greenDim)"/><path d="M4 5h8M4 8h8M4 11h5" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="file-pill-name" id="import-filename"></span>
+          <span class="file-pill-meta" id="import-meta"></span>
+          <button class="file-pill-close" onclick="resetImport()">✕</button>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label id="import-proj-label">Project key</label>
+            <select id="import-project" onchange="applyImportFilters()">
+              <option value="">All projects</option>
+            </select>
+          </div>
+          <div class="field">
+            <label id="import-ver-label">Fix version</label>
+            <select id="import-version" onchange="applyImportFilters()">
+              <option value="">All versions</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Status</label>
+            <select id="i-status" onchange="applyImportFilters()">
+              <option value="done">Done / Resolved / Closed</option>
+              <option value="all">All statuses</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Issue type</label>
+            <select id="i-type" onchange="applyImportFilters()">
+              <option value="all">All types</option>
+              <option value="bug">Bugs only</option>
+              <option value="feature">Features &amp; Stories</option>
+              <option value="no-epic">Exclude Epics</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;color:var(--textMuted)" id="import-count"></span>
+          <button onclick="resetImport()" style="background:none;border:none;color:var(--textMuted);cursor:pointer;font-size:13px;text-decoration:underline;padding:0;margin-left:auto">Upload different file</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       STEP 3 (shared): Select issues
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="issues-section" style="display:none">
+    <div class="card">
+      <div class="step-header">
+        <div class="step-num" id="issues-step-num">3</div>
+        <div class="step-label">Select issues</div>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-tile"><div class="metric-val" id="mx-total" style="color:var(--green)">0</div><div class="metric-lbl">Total</div></div>
+        <div class="metric-tile"><div class="metric-val" id="mx-bugs"  style="color:var(--red)">0</div><div class="metric-lbl">Bugs</div></div>
+        <div class="metric-tile"><div class="metric-val" id="mx-feat"  style="color:var(--green)">0</div><div class="metric-lbl">Features</div></div>
+        <div class="metric-tile"><div class="metric-val" id="mx-hi"    style="color:var(--amber)">0</div><div class="metric-lbl">High priority</div></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <input type="text" id="issue-search" placeholder="Search issues…" style="max-width:220px;padding:7px 12px;font-size:13px" oninput="renderIssueList()" />
+        <span style="font-size:13px;color:var(--textMuted);margin-left:auto" id="sel-count">0 / 0 selected</span>
+        <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="selectAll(true)">Select all</button>
+        <button class="btn btn-ghost"     style="font-size:12px;padding:6px 12px" onclick="selectAll(false)">Clear</button>
+      </div>
+
+      <div class="issue-list" id="issue-list"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       STEP 4 (shared): Generate
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="generate-section" style="display:none">
+    <div class="card">
+      <div class="step-header">
+        <div class="step-num" id="gen-step-num">4</div>
+        <div class="step-label">Generate release notes</div>
+      </div>
+
+      <div class="style-badge">
+        <svg width="14" height="14" viewBox="0 0 36 36" fill="none"><polygon points="18,2 34,18 18,34 2,18" fill="#1AB87C"/><polygon points="18,9 27,18 18,27 9,18" fill="#0F1612"/><polygon points="18,14 22,18 18,22 14,18" fill="#1AB87C"/></svg>
+        <span class="style-badge-label">Infoblox house style applied</span>
+        <span class="style-badge-desc">· Category: Title · Summary line · Prose paragraph · "For more information, see…"</span>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Version / release name</label>
+          <input type="text" id="ver-name" placeholder="e.g. NIOS-X v4.1 — May 2026" />
+        </div>
+        <div class="field">
+          <label>Output format</label>
+          <select id="out-fmt">
+            <option value="infoblox">Infoblox plain text (default)</option>
+            <option value="markdown">Markdown</option>
+            <option value="html">HTML</option>
+            <option value="confluence">Confluence wiki markup</option>
+            <option value="json">JSON (structured)</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div class="field">
+          <label>Extra instructions (optional)</label>
+          <input type="text" id="extra-instr" placeholder="e.g. Group under NIOS-X category, include OCI references, note deprecated features…" />
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="gen-btn" onclick="generate()">
+        Generate release notes →
+      </button>
+      <div class="err-box" id="gen-error"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       OUTPUT
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="output-section" style="display:none">
+    <div class="card glow" id="output-card">
+      <div class="output-header">
+        <div style="display:flex;align-items:center">
+          <div class="output-dot"></div>
+          <span class="output-label" id="output-label">Output · infoblox</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" id="copy-btn" onclick="copyOutput()">Copy</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onclick="generate()">Regenerate</button>
+        </div>
+      </div>
+      <pre class="output-pre" id="output-pre"></pre>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="app-footer">
+    <svg width="14" height="14" viewBox="0 0 36 36" fill="none"><polygon points="18,2 34,18 18,34 2,18" fill="#1AB87C" opacity=".7"/><polygon points="18,9 27,18 18,27 9,18" fill="#090E0C"/><polygon points="18,14 22,18 18,22 14,18" fill="#1AB87C" opacity=".7"/></svg>
+    <span>Infoblox Release Notes Generator · Jira + Claude AI</span>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let mode = 'jira';
+let allIssues = [];
+let selectedKeys = new Set();
+let allImportedIssues = [];
+let importProjects = [];
+let importVersions = [];
+
+// ── Mode switch ───────────────────────────────────────────────────────────────
+function switchMode(m) {
+  mode = m;
+  document.getElementById('tab-jira').classList.toggle('active', m === 'jira');
+  document.getElementById('tab-import').classList.toggle('active', m === 'import');
+  document.getElementById('jira-section').style.display   = m === 'jira'   ? '' : 'none';
+  document.getElementById('import-section').style.display = m === 'import' ? '' : 'none';
+  document.getElementById('issues-section').style.display   = 'none';
+  document.getElementById('generate-section').style.display = 'none';
+  document.getElementById('output-section').style.display   = 'none';
+  allIssues = []; selectedKeys = new Set();
+
+  if (m === 'jira' && document.getElementById('sel-project').children.length <= 1) {
+    loadProjects();
+  }
+  updateStepNumbers();
+}
+
+function updateStepNumbers() {
+  document.getElementById('issues-step-num').textContent  = mode === 'jira' ? '3' : '2';
+  document.getElementById('gen-step-num').textContent     = mode === 'jira' ? '4' : '3';
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function callClaude(system, userMsg, withMcp = true) {
+  const body = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1000,
+    system,
+    messages: [{ role: 'user', content: userMsg }],
+  };
+  if (withMcp) body.mcp_servers = [{ type: 'url', url: 'https://mcp.atlassian.com/v1/mcp', name: 'atlassian' }];
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return (data.content || []).map(b => b.type === 'text' ? b.text : (b.content?.[0]?.text || '')).join('');
+}
+
+function parseJsonArray(raw) {
+  const m = raw.match(/\[[\s\S]*?\]/);
+  try { return m ? JSON.parse(m[0]) : null; } catch { return null; }
+}
+
+// ── Jira: load projects ───────────────────────────────────────────────────────
+async function loadProjects() {
+  show('proj-loading'); hide('proj-error'); hide('proj-info'); hide('proj-fields');
+  try {
+    const raw = await callClaude(
+      `You are a Jira assistant. Use the Jira MCP tool to list all accessible Jira projects.
+Return ONLY a valid JSON array. No markdown, no backticks, no explanation.
+Format: [{"key":"PROJ","name":"Project Name","id":"10001"},...]`,
+      'List all Jira projects I have access to and return them as a JSON array.'
+    );
+    const list = parseJsonArray(raw);
+    if (!list || !list.length) throw new Error('No projects returned. Make sure your Atlassian account is connected in Settings → Integrations.');
+    const sel = document.getElementById('sel-project');
+    list.forEach(p => { const o = new Option(`${p.key} — ${p.name}`, p.key); sel.add(o); });
+    setLabel('proj-label', `Jira project — ${list.length} available`);
+    show('proj-fields');
+  } catch (e) {
+    showErr('proj-error', e.message);
+    const info = document.getElementById('proj-info');
+    info.innerHTML = `Can't connect to Jira? <button class="switch-mode-link" onclick="switchMode('import')">Import a CSV or Excel file instead →</button>`;
+    info.classList.add('show');
+  } finally {
+    hide('proj-loading');
+  }
+}
+
+async function onProjectChange() {
+  const proj = document.getElementById('sel-project').value;
+  if (!proj) return;
+  markStepDone('step1-num');
+  setLabel('ver-name', `${proj} — Release`);
+
+  // Reset sprint + version selects
+  resetSelect('sel-sprint',  'All sprints');
+  resetSelect('sel-version', 'Any version');
+  show('sprint-spinner'); show('ver-spinner');
+
+  // Load sprints
+  callClaude(
+    `Return ONLY a valid JSON array of sprints. No markdown.
+Format: [{"id":"123","name":"Sprint 12","state":"active"},...] state: active|closed|future. Most recent first.`,
+    `List all sprints for Jira project key "${proj}".`
+  ).then(raw => {
+    const list = parseJsonArray(raw) || [];
+    const sel = document.getElementById('sel-sprint');
+    let hasActive = false;
+    list.forEach(s => {
+      const prefix = s.state === 'active' ? '★ ' : s.state === 'future' ? '○ ' : '';
+      sel.add(new Option(prefix + s.name, s.name));
+      if (s.state === 'active' && !hasActive) {
+        hasActive = true;
+        const badge = document.getElementById('active-sprint-badge');
+        badge.textContent = `● Active: ${s.name}`;
+        show('active-sprint-badge');
+      }
+    });
+    if (list.length) show('sprint-legend');
+  }).catch(() => {}).finally(() => hide('sprint-spinner'));
+
+  // Load fix versions
+  callClaude(
+    `Return ONLY a valid JSON array of fix versions. No markdown.
+Format: [{"id":"10020","name":"v2.4.0","released":true,"releaseDate":"2026-05-01"},...]`,
+    `List all fix versions for Jira project key "${proj}".`
+  ).then(raw => {
+    const list = parseJsonArray(raw) || [];
+    const sel = document.getElementById('sel-version');
+    list.forEach(v => {
+      const label = v.name + (v.released ? ' ✓' : '') + (v.releaseDate ? ` · ${v.releaseDate}` : '');
+      sel.add(new Option(label, v.name));
+    });
+  }).catch(() => {}).finally(() => hide('ver-spinner'));
+}
+
+// ── Jira: fetch issues ────────────────────────────────────────────────────────
+async function fetchIssues() {
+  const proj    = document.getElementById('sel-project').value;
+  const sprint  = document.getElementById('sel-sprint').value;
+  const version = document.getElementById('sel-version').value;
+  const useJql  = document.getElementById('use-jql').checked;
+  const jqlTxt  = document.getElementById('custom-jql').value.trim();
+  const statusF = document.getElementById('j-status').value;
+  const typeF   = document.getElementById('j-type').value;
+  const maxI    = document.getElementById('j-max').value;
+  const from    = document.getElementById('j-from').value;
+  const to      = document.getElementById('j-to').value;
+
+  if (!proj && !useJql) { showErr('fetch-error', 'Select a project first.'); return; }
+
+  const btn = document.getElementById('fetch-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Fetching…';
+  hideErr('fetch-error');
+  hide('issues-section'); hide('generate-section'); hide('output-section');
+
+  let jql;
+  if (useJql) {
+    jql = jqlTxt;
+  } else {
+    const parts = [`project = "${proj}"`];
+    if (sprint)  parts.push(`sprint = "${sprint}"`);
+    if (version) parts.push(`fixVersion = "${version}"`);
+    if (statusF === 'done')     parts.push(`status in ("Done","Resolved","Closed")`);
+    if (statusF === 'released') parts.push(`status = "Released"`);
+    if (typeF === 'bug')        parts.push(`issuetype = Bug`);
+    if (typeF === 'feature')    parts.push(`issuetype in (Story,Feature,"New Feature",Improvement)`);
+    if (typeF === 'no-epic')    parts.push(`issuetype != Epic`);
+    if (from) parts.push(`updated >= "${from}"`);
+    if (to)   parts.push(`updated <= "${to}"`);
+    jql = parts.join(' AND ') + ' ORDER BY created DESC';
+  }
+
+  try {
+    const raw = await callClaude(
+      `You are a Jira assistant. Use the Jira MCP searchJiraIssuesUsingJql tool.
+Return ONLY a valid JSON array. No markdown, no backticks.
+Each element: {"key":"PROJ-1","summary":"...","type":"Bug|Story|Task|Feature|Epic|Improvement","status":"Done|In Progress|...","assignee":"name or null","priority":"High|Medium|Low|null","description":"first 150 chars or null","fixVersion":"version name or null","labels":[]}
+Limit to ${maxI} issues.`,
+      `Search Jira with this JQL: ${jql}`
+    );
+    const list = parseJsonArray(raw);
+    if (!list || !list.length) throw new Error('No issues found. Try relaxing the status filter or check the project key.');
+    loadIssueList(list);
+  } catch (e) {
+    showErr('fetch-error', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Fetch issues →';
+  }
+}
+
+// ── CSV / XLSX parser ─────────────────────────────────────────────────────────
+const COL_MAP = {
+  key:         ['issue key','key','id','ticket','issue id'],
+  summary:     ['summary','title','name','subject','description title'],
+  type:        ['issue type','issuetype','type','kind'],
+  status:      ['status','state','resolution status'],
+  priority:    ['priority','severity'],
+  assignee:    ['assignee','assigned to','owner'],
+  fixVersion:  ['fix version/s','fix version','fix versions','version','release'],
+  description: ['description','details','body'],
+  labels:      ['labels','tags','label'],
+  project:     ['project key','project','project name'],
+};
+
+function findCol(headers, candidates) {
+  const lc = headers.map(h => (h||'').toLowerCase().trim());
+  for (const c of candidates) { const i = lc.indexOf(c); if (i !== -1) return headers[i]; }
+  return null;
+}
+
+function rowsToIssues(rows, headers) {
+  const col = {};
+  for (const [f, cands] of Object.entries(COL_MAP)) col[f] = findCol(headers, cands);
+  return rows
+    .filter(r => col.key ? r[col.key] : true)
+    .map(r => ({
+      key:         col.key         ? String(r[col.key]||'').trim() : '',
+      summary:     col.summary     ? String(r[col.summary]||'').trim() : '',
+      type:        col.type        ? String(r[col.type]||'').trim() : 'Task',
+      status:      col.status      ? String(r[col.status]||'').trim() : '',
+      priority:    col.priority    ? String(r[col.priority]||'').trim() : '',
+      assignee:    col.assignee    ? String(r[col.assignee]||'').trim() : '',
+      fixVersion:  col.fixVersion  ? String(r[col.fixVersion]||'').trim() : '',
+      description: col.description ? String(r[col.description]||'').slice(0,150).trim() : '',
+      labels:      col.labels      ? String(r[col.labels]||'').split(/[,;]/).map(s=>s.trim()).filter(Boolean) : [],
+      project:     col.project     ? String(r[col.project]||'').trim() : '',
+    }))
+    .filter(r => r.key || r.summary);
+}
+
+function parseFile(file) {
+  return new Promise((resolve, reject) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'csv') {
+      Papa.parse(file, {
+        header: true, skipEmptyLines: true,
+        complete: r => resolve({ rows: r.data, headers: r.meta.fields || [] }),
+        error: e => reject(new Error(e.message)),
+      });
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          const headers = rows.length ? Object.keys(rows[0]) : [];
+          resolve({ rows, headers });
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = () => reject(new Error('File read failed'));
+      reader.readAsArrayBuffer(file);
+    } else {
+      reject(new Error('Unsupported file type. Please upload a .csv, .xlsx, or .xls file.'));
+    }
+  });
+}
+
+// ── Import handlers ───────────────────────────────────────────────────────────
+function onDrop(e) { e.preventDefault(); onDragLeave(e); const f = e.dataTransfer.files[0]; if (f) handleImport(f); }
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function onFileSelect(e) { if (e.target.files[0]) handleImport(e.target.files[0]); }
+
+async function handleImport(file) {
+  show('import-loading'); hideErr('import-error'); hide('import-summary');
+  allImportedIssues = []; allIssues = []; selectedKeys = new Set();
+  hide('issues-section'); hide('generate-section'); hide('output-section');
+
+  try {
+    const { rows, headers } = await parseFile(file);
+    if (!rows.length) throw new Error('File is empty or could not be parsed.');
+    const parsed = rowsToIssues(rows, headers);
+    if (!parsed.length) throw new Error("No valid issues found. Make sure the file has 'Issue Key' or 'Summary' columns.");
+
+    allImportedIssues = parsed;
+
+    // Populate project dropdown
+    importProjects = [...new Set(parsed.map(i => i.project || i.key.split('-')[0]).filter(Boolean))];
+    const pSel = document.getElementById('import-project');
+    pSel.innerHTML = '<option value="">All projects</option>';
+    importProjects.forEach(p => pSel.add(new Option(p, p)));
+    if (importProjects.length === 1) { pSel.value = importProjects[0]; setInput('ver-name', `${importProjects[0]} — Release`); }
+    setLabel('import-proj-label', `Project key — ${importProjects.length} detected`);
+
+    // Populate version dropdown
+    importVersions = [...new Set(parsed.map(i => i.fixVersion).filter(Boolean))];
+    const vSel = document.getElementById('import-version');
+    vSel.innerHTML = '<option value="">All versions</option>';
+    importVersions.forEach(v => vSel.add(new Option(v, v)));
+    if (importVersions.length === 1) vSel.value = importVersions[0];
+    setLabel('import-ver-label', `Fix version — ${importVersions.length} detected`);
+
+    // Show summary
+    document.getElementById('import-filename').textContent = file.name;
+    document.getElementById('import-meta').textContent = `${parsed.length} issues · ${importProjects.length} project${importProjects.length!==1?'s':''} · ${importVersions.length} version${importVersions.length!==1?'s':''}`;
+    hide('drop-zone'); show('import-summary');
+    markStepDone('import-step-num');
+
+    applyImportFilters();
+  } catch (e) {
+    showErr('import-error', e.message);
+  } finally {
+    hide('import-loading');
+  }
+}
+
+function applyImportFilters() {
+  const proj    = document.getElementById('import-project').value;
+  const ver     = document.getElementById('import-version').value;
+  const statusF = document.getElementById('i-status').value;
+  const typeF   = document.getElementById('i-type').value;
+
+  let filtered = allImportedIssues;
+  if (proj) filtered = filtered.filter(i => (i.project || i.key.split('-')[0]) === proj);
+  if (ver)  filtered = filtered.filter(i => i.fixVersion === ver);
+  if (statusF === 'done') filtered = filtered.filter(i => { const l=(i.status||'').toLowerCase(); return l.includes('done')||l.includes('resolv')||l.includes('close'); });
+  if (typeF === 'bug')     filtered = filtered.filter(i => (i.type||'').toLowerCase().includes('bug'));
+  if (typeF === 'feature') filtered = filtered.filter(i => { const l=(i.type||'').toLowerCase(); return l.includes('story')||l.includes('feature')||l.includes('improvement'); });
+  if (typeF === 'no-epic') filtered = filtered.filter(i => !(i.type||'').toLowerCase().includes('epic'));
+
+  document.getElementById('import-count').textContent = `${filtered.length} issues loaded`;
+  loadIssueList(filtered);
+}
+
+function resetImport() {
+  allImportedIssues = []; allIssues = []; selectedKeys = new Set();
+  hide('import-summary'); show('drop-zone');
+  document.getElementById('file-input').value = '';
+  hide('issues-section'); hide('generate-section'); hide('output-section');
+  document.getElementById('import-step-num').textContent = '1';
+  document.getElementById('import-step-num').classList.remove('done');
+}
+
+// ── Issue list ────────────────────────────────────────────────────────────────
+function loadIssueList(issues) {
+  allIssues = issues;
+  selectedKeys = new Set(issues.map(i => i.key));
+  renderIssueList();
+  show('issues-section');
+  show('generate-section');
+  updateMetrics();
+}
+
+function renderIssueList() {
+  const search = (document.getElementById('issue-search').value || '').toLowerCase();
+  const filtered = allIssues.filter(i => !search || i.key.toLowerCase().includes(search) || i.summary.toLowerCase().includes(search));
+  const list = document.getElementById('issue-list');
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="no-match">No issues match your filters.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(issue => {
+    const tm = typeMeta(issue.type);
+    const sc = statusColor(issue.status);
+    const pc = priorityColor(issue.priority);
+    const sel = selectedKeys.has(issue.key);
+    return `<div class="issue-row ${sel?'selected':''}" onclick="toggleIssue('${esc(issue.key)}')">
+      <input type="checkbox" ${sel?'checked':''} onclick="event.stopPropagation();toggleIssue('${esc(issue.key)}')" style="width:auto;accent-color:var(--green);flex-shrink:0" />
+      <span class="issue-key">${esc(issue.key)}</span>
+      <span class="issue-summary">${esc(issue.summary)}</span>
+      <div class="issue-badges">
+        <span class="badge badge-${tm.c}">${tm.lbl}</span>
+        ${pc ? `<span class="badge badge-${pc}">${esc(issue.priority)}</span>` : ''}
+        <span class="badge badge-${sc}">${esc(issue.status||'—')}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateSelCount();
+}
+
+function toggleIssue(key) {
+  selectedKeys.has(key) ? selectedKeys.delete(key) : selectedKeys.add(key);
+  renderIssueList();
+}
+
+function selectAll(v) {
+  if (v) allIssues.forEach(i => selectedKeys.add(i.key));
+  else selectedKeys.clear();
+  renderIssueList();
+}
+
+function updateSelCount() {
+  document.getElementById('sel-count').textContent = `${selectedKeys.size} / ${allIssues.length} selected`;
+  const num = document.getElementById('issues-step-num');
+  if (selectedKeys.size > 0) { num.textContent = '✓'; num.classList.add('done'); }
+  else { num.textContent = mode==='jira'?'3':'2'; num.classList.remove('done'); }
+}
+
+function updateMetrics() {
+  const issues = allIssues;
+  document.getElementById('mx-total').textContent = issues.length;
+  document.getElementById('mx-bugs').textContent  = issues.filter(i=>(i.type||'').toLowerCase().includes('bug')).length;
+  document.getElementById('mx-feat').textContent  = issues.filter(i=>{ const l=(i.type||'').toLowerCase(); return l.includes('story')||l.includes('feature')||l.includes('improvement'); }).length;
+  document.getElementById('mx-hi').textContent    = issues.filter(i=>{ const p=(i.priority||'').toLowerCase(); return p==='high'||p==='highest'||p==='critical'; }).length;
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function generate() {
+  const sel = allIssues.filter(i => selectedKeys.has(i.key));
+  if (!sel.length) { showErr('gen-error', 'Select at least one issue.'); return; }
+
+  const verName   = document.getElementById('ver-name').value.trim();
+  const fmt       = document.getElementById('out-fmt').value;
+  const extraInstr= document.getElementById('extra-instr').value.trim();
+
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Writing release notes…';
+  hideErr('gen-error');
+  hide('output-section');
+
+  const fmts = {
+    infoblox:   'Use the Infoblox house style exactly as described in the system prompt.',
+    markdown:   'Output as Markdown. Use the Infoblox prose style but wrap in standard Markdown.',
+    html:       'Output as clean semantic HTML using <ul>, <li>, <strong> for titles, <p> for body. No inline styles.',
+    confluence: 'Output as Confluence wiki markup. Use the Infoblox prose style. Use h2. for any section headings.',
+    json:       'Output as JSON only: {"version":"...","date":"...","entries":[{"title":"Category: Feature Title","summary":"one-sentence capability statement","detail":"full prose paragraph ending with For more information, see [Topic]."}]}',
+  };
+
+  const issueLines = sel.map(i =>
+    `- Summary: ${i.summary}${i.type?`\n  Type: ${i.type}`:''}${i.description?`\n  Description: ${i.description}`:''}${i.fixVersion?`\n  Fix Version: ${i.fixVersion}`:''}`
+  ).join('\n');
+
+  const STYLE_SYSTEM = `You are a technical writer at Infoblox. You write release notes in the exact Infoblox house style.
+
+INFOBLOX RELEASE NOTE STYLE RULES — follow every rule precisely:
+
+1. ENTRY STRUCTURE — each feature is written as:
+   * [Category]: [Feature Title]:
+   *
+   [One-sentence capability summary — declarative, present tense, NO "now"]
+   [Full prose expansion paragraph ending with "For more information, see [Topic]."]
+
+2. TITLE FORMAT:
+   - Start with asterisk and space: "* "
+   - Format: "Category: Feature Title:" — colon between category and title, colon at end
+   - Use title case
+   - Category is usually the product name (e.g. "NIOS-X", "BloxOne", "Infoblox Portal")
+   - Example: "* NIOS-X: Oracle Cloud Support:"
+
+3. SUMMARY LINE (first body line):
+   - One short declarative sentence
+   - Present tense, NO "now"
+   - States capability plainly
+   - Example: "NIOS-X supports automatic server right-sizing."
+
+4. DETAIL PARAGRAPH (second body line):
+   - Start with product/feature name + "now supports" / "now provides" / "now includes" / "now allows"
+   - Explain: WHAT the feature does, WHERE to find it (exact UI page names), HOW it works briefly, WHY it benefits the user
+   - Name UI elements exactly as they appear in the product (e.g. "Servers page", "Infoblox Portal", "Apply software updates now")
+   - End every entry with: "For more information, see [Relevant Topic Name]."
+   - One paragraph, 2–4 sentences max
+
+5. TONE & LANGUAGE:
+   - Professional, active voice, present tense
+   - User-benefit focused
+   - Expand acronyms on first use: "Oracle Cloud Infrastructure (OCI)"
+   - Include version numbers when relevant: "NIOS-X v4.0 now supports..."
+   - Never include Jira ticket keys/numbers in the output
+   - No markdown formatting symbols unless format explicitly requires it
+
+6. SPACING:
+   - Blank line between the title line and the body
+   - Blank line between entries
+
+FORMAT INSTRUCTION: ${fmts[fmt]}
+${extraInstr ? `ADDITIONAL INSTRUCTIONS: ${extraInstr}` : ''}
+
+Output ONLY the release note entries. No preamble, no heading, no explanation.
+
+EXAMPLE OUTPUT (match this style exactly):
+* NIOS-X: Oracle Cloud Support:
+
+NIOS-X supports deployment on Oracle Cloud Infrastructure (OCI).
+You can now deploy NIOS-X servers on Oracle Cloud Infrastructure (OCI) using the Infoblox-provided OCI package, which you can download from the Infoblox Portal. For more information, see Oracle Cloud Infrastructure (OCI) Deployment.
+
+* NIOS-X: Automatic Server Right-Sizing:
+
+NIOS-X supports automatic server right-sizing.
+NIOS-X now supports automatic server right-sizing, scaling servers to the next Infoblox-recommended size when capacity thresholds are exceeded multiple times within a monthly cycle, ensuring servers remain within supported performance limits. For more information, see Automatic Server Right-Sizing.`;
+
+  try {
+    const raw = await callClaude(
+      STYLE_SYSTEM,
+      `Write Infoblox release notes for version: "${verName || 'this release'}"\n\nFeatures/issues to document:\n${issueLines}`,
+      false
+    );
+    if (!raw.trim()) throw new Error('AI returned empty response. Try again.');
+    document.getElementById('output-pre').textContent = raw.trim();
+    document.getElementById('output-label').textContent = `Output · ${fmt}`;
+    show('output-section');
+    document.getElementById('output-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    showErr('gen-error', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `Generate release notes →`;
+  }
+}
+
+function copyOutput() {
+  const text = document.getElementById('output-pre').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ Copied';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function typeMeta(t='') {
+  const l = t.toLowerCase();
+  if (l.includes('bug')) return {c:'red', lbl:'Bug'};
+  if (l.includes('epic')) return {c:'teal', lbl:'Epic'};
+  if (l.includes('story')) return {c:'blue', lbl:'Story'};
+  if (l.includes('feature')||l.includes('improvement')) return {c:'green', lbl:l.includes('feature')?'Feature':'Improvement'};
+  return {c:'muted', lbl:t||'Task'};
+}
+function statusColor(s='') {
+  const l = s.toLowerCase();
+  if (l.includes('done')||l.includes('resolv')||l.includes('close')) return 'green';
+  if (l.includes('progress')||l.includes('review')) return 'amber';
+  return 'muted';
+}
+function priorityColor(p='') {
+  const l = p.toLowerCase();
+  if (l==='highest'||l==='critical') return 'red';
+  if (l==='high') return 'amber';
+  if (l==='low'||l==='lowest') return 'blue';
+  return null;
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function show(id) { const el=document.getElementById(id); if(el) el.style.display=''; }
+function hide(id) { const el=document.getElementById(id); if(el) el.style.display='none'; }
+function showErr(id, msg) { const el=document.getElementById(id); if(!el) return; el.textContent='⚠ '+msg; el.classList.add('show'); }
+function hideErr(id) { const el=document.getElementById(id); if(!el) return; el.textContent=''; el.classList.remove('show'); }
+function setLabel(id, text) { const el=document.getElementById(id); if(el) el.textContent=text; }
+function setInput(id, val) { const el=document.getElementById(id); if(el) el.value=val; }
+function resetSelect(id, placeholder) { const sel=document.getElementById(id); if(!sel) return; sel.innerHTML=`<option value="">${placeholder}</option>`; }
+function toggleJql() { const on=document.getElementById('use-jql').checked; document.getElementById('jql-wrap').style.display=on?'':'none'; }
+function markStepDone(id) { const el=document.getElementById(id); if(!el) return; el.textContent='✓'; el.classList.add('done'); }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadProjects();
+});
+</script>
+</body>
+</html>
