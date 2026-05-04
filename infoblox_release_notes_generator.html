@@ -1,0 +1,658 @@
+
+<style>
+  :root {
+    --ib-bg: #090E0C; --ib-card: #0F1612; --ib-active: #132019;
+    --ib-border: #1E3028; --ib-borderhi: #2E5040;
+    --ib-green: #1AB87C; --ib-greendim: #072818; --ib-greentext: #3DD68C; --ib-greenfaint: #0F2E1E;
+    --ib-red: #E05050; --ib-reddim: #2E1010;
+    --ib-amber: #E0A030; --ib-amberdim: #2E2010;
+    --ib-blue: #4090D0; --ib-bluedim: #0A1E2E;
+    --ib-teal: #20C0A0; --ib-tealdim: #0A2820;
+    --ib-text: #E8F5F0; --ib-muted: #6A9E88; --ib-faint: #2A5040;
+    --ib-mono: 'JetBrains Mono','Fira Code',monospace;
+  }
+  .ib-root { background:var(--ib-bg); color:var(--ib-text); font-family:'DM Sans',system-ui,sans-serif; min-height:600px; padding:1.5rem; border-radius:12px; }
+  .ib-root * { box-sizing:border-box; }
+  @keyframes ibspin { to { transform:rotate(360deg); } }
+  @keyframes ibfade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  .ib-hdr { border-bottom:1px solid var(--ib-border); padding-bottom:1.25rem; margin-bottom:1rem; }
+  .ib-logo { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .ib-title { display:flex; align-items:baseline; gap:8px; font-family:'Barlow Condensed','DM Sans',system-ui,sans-serif; font-size:22px; font-weight:700; letter-spacing:.02em; }
+  .ib-rule { height:2px; background:linear-gradient(90deg,var(--ib-green),var(--ib-greendim)); border-radius:1px; }
+
+  .ib-tabs { display:flex; gap:6px; background:var(--ib-card); border:1px solid var(--ib-border); border-radius:8px; padding:4px; margin-bottom:12px; }
+  .ib-tab { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:9px 14px; border:none; border-radius:6px; cursor:pointer; font-family:inherit; font-size:13px; font-weight:600; transition:all .15s; background:transparent; color:var(--ib-muted); }
+  .ib-tab.on { background:var(--ib-green); color:#090E0C; }
+
+  .ib-card { background:var(--ib-card); border:1px solid var(--ib-border); border-radius:8px; padding:1.25rem; margin-bottom:10px; animation:ibfade .3s ease; }
+  .ib-card.glow { border-color:rgba(26,184,124,.4); box-shadow:0 0 20px var(--ib-greendim); }
+
+  .ib-step { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .ib-stepnum { width:22px; height:22px; border-radius:4px; background:var(--ib-greendim); color:var(--ib-greentext); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'Barlow Condensed',sans-serif; }
+  .ib-stepnum.done { background:var(--ib-green); color:#090E0C; }
+  .ib-steplbl { font-size:11px; font-weight:700; color:var(--ib-muted); text-transform:uppercase; letter-spacing:.08em; font-family:'Barlow Condensed',sans-serif; }
+
+  .ib-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; align-items:flex-end; }
+  .ib-fld { display:flex; flex-direction:column; gap:5px; flex:1; min-width:0; }
+  .ib-fld label { font-size:11px; color:var(--ib-muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
+  .ib-input { background:var(--ib-card); color:var(--ib-text); border:1px solid var(--ib-border); border-radius:6px; font-family:inherit; font-size:13px; padding:8px 11px; outline:none; width:100%; transition:border-color .15s; }
+  .ib-input:focus { border-color:var(--ib-green); }
+  .ib-input::placeholder { color:var(--ib-faint); }
+  .ib-sel { background:var(--ib-card); color:var(--ib-text); border:1px solid var(--ib-border); border-radius:6px; font-family:inherit; font-size:13px; padding:8px 30px 8px 11px; outline:none; width:100%; appearance:none; cursor:pointer; transition:border-color .15s; background-image:url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4l3 3 3-3' stroke='%232A5040' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
+  .ib-sel:focus { border-color:var(--ib-green); }
+  .ib-sel:disabled { opacity:.4; cursor:not-allowed; }
+
+  .ib-btn { font-family:inherit; font-size:13px; font-weight:500; padding:8px 14px; border-radius:6px; border:none; cursor:pointer; transition:all .15s; white-space:nowrap; display:inline-flex; align-items:center; gap:6px; }
+  .ib-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .ib-primary { background:var(--ib-green); color:#090E0C; font-weight:700; }
+  .ib-secondary { background:transparent; color:var(--ib-text); border:1px solid var(--ib-border); }
+  .ib-ghost { background:transparent; color:var(--ib-muted); }
+  .ib-full { width:100%; justify-content:center; padding:12px; font-size:14px; }
+
+  .ib-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:3px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+  .bg-green { background:var(--ib-greendim); color:var(--ib-greentext); }
+  .bg-red   { background:var(--ib-reddim);   color:var(--ib-red); }
+  .bg-amber { background:var(--ib-amberdim); color:var(--ib-amber); }
+  .bg-blue  { background:var(--ib-bluedim);  color:var(--ib-blue); }
+  .bg-teal  { background:var(--ib-tealdim);  color:var(--ib-teal); }
+  .bg-muted { background:#1A1E14; color:var(--ib-muted); }
+
+  .ib-err  { display:none; background:var(--ib-reddim); color:var(--ib-red); border-radius:6px; padding:9px 13px; font-size:12px; margin-top:8px; border:1px solid rgba(224,80,80,.2); }
+  .ib-info { background:var(--ib-greendim); color:var(--ib-greentext); border-radius:6px; padding:8px 13px; font-size:12px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+
+  .ib-drop { border:2px dashed var(--ib-borderhi); border-radius:8px; padding:2rem 1rem; text-align:center; cursor:pointer; transition:all .15s; background:var(--ib-active); }
+  .ib-drop:hover, .ib-drop.over { border-color:var(--ib-green); background:var(--ib-greenfaint); }
+  .ib-pill { display:flex; align-items:center; gap:10px; background:var(--ib-greenfaint); border:1px solid rgba(26,184,124,.25); border-radius:6px; padding:9px 13px; margin-bottom:12px; }
+
+  .ib-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+  .ib-metric { background:var(--ib-active); border:1px solid var(--ib-border); border-radius:6px; padding:10px 12px; }
+  .ib-mval { font-size:22px; font-weight:700; line-height:1; font-family:'Barlow Condensed',sans-serif; }
+  .ib-mlbl { font-size:11px; color:var(--ib-muted); margin-top:3px; text-transform:uppercase; letter-spacing:.05em; }
+
+  .ib-issues { display:flex; flex-direction:column; gap:4px; max-height:320px; overflow-y:auto; padding-right:3px; }
+  .ib-issue { display:flex; align-items:center; gap:8px; padding:8px 11px; border:1px solid var(--ib-border); border-left:3px solid var(--ib-border); border-radius:6px; cursor:pointer; background:var(--ib-card); transition:all .12s; }
+  .ib-issue.sel { border-color:rgba(26,184,124,.35); border-left-color:var(--ib-green); background:var(--ib-greenfaint); }
+  .ib-ikey { font-size:11px; color:var(--ib-greentext); font-family:var(--ib-mono); min-width:75px; flex-shrink:0; }
+  .ib-isum { font-size:12px; color:var(--ib-text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ib-ibadges { display:flex; gap:4px; flex-shrink:0; }
+
+  .ib-spinner { width:14px; height:14px; border:2px solid var(--ib-border); border-top-color:var(--ib-green); border-radius:50%; animation:ibspin .7s linear infinite; flex-shrink:0; }
+  .ib-loading { display:flex; align-items:center; gap:8px; color:var(--ib-muted); font-size:13px; padding:8px 0; }
+
+  .ib-out-pre { font-family:var(--ib-mono); font-size:12px; line-height:1.8; color:var(--ib-text); background:var(--ib-active); border-radius:6px; padding:.875rem; white-space:pre-wrap; word-break:break-word; max-height:500px; overflow-y:auto; }
+  .ib-stylebadge { display:flex; align-items:center; gap:7px; background:var(--ib-greenfaint); border:1px solid rgba(26,184,124,.22); border-radius:6px; padding:7px 12px; margin-bottom:12px; font-size:12px; }
+  .ib-noissues { padding:2rem; text-align:center; color:var(--ib-faint); font-size:13px; }
+  .spinner-lg { width:18px; height:18px; }
+</style>
+
+<div class="ib-root" id="ibroot">
+
+  <!-- Header -->
+  <div class="ib-hdr">
+    <div class="ib-logo">
+      <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 34,18 18,34 2,18" fill="#1AB87C"/>
+        <polygon points="18,8 28,18 18,28 8,18" fill="#090E0C"/>
+        <polygon points="18,13 23,18 18,23 13,18" fill="#1AB87C"/>
+      </svg>
+      <div class="ib-title">
+        <span style="color:#E8F5F0">RELEASE NOTES</span>
+        <span style="color:#1AB87C">GENERATOR</span>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--ib-muted);margin-bottom:8px">Infoblox · connect Jira or import CSV/Excel · Infoblox house style AI</div>
+    <div class="ib-rule"></div>
+  </div>
+
+  <!-- Mode tabs -->
+  <div class="ib-tabs">
+    <button class="ib-tab on" id="tab-jira" onclick="setMode('jira')">
+      <svg width="14" height="14" viewBox="0 0 36 36" fill="none"><polygon points="18,2 34,18 18,34 2,18" fill="currentColor" opacity=".8"/><polygon points="18,9 27,18 18,27 9,18" fill="#090E0C"/><polygon points="18,14 22,18 18,22 14,18" fill="currentColor" opacity=".8"/></svg>
+      Connect to Jira
+    </button>
+    <button class="ib-tab" id="tab-import" onclick="setMode('import')">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 7l4 4 4-4M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Import CSV / Excel
+    </button>
+  </div>
+
+  <!-- JIRA SECTION -->
+  <div id="sec-jira">
+    <div class="ib-card">
+      <div class="ib-step"><div class="ib-stepnum" id="sn1">1</div><div class="ib-steplbl">Select project &amp; sprint</div></div>
+      <div class="ib-loading" id="proj-load" style="display:none"><div class="ib-spinner"></div>Connecting to Jira…</div>
+      <div class="ib-err" id="proj-err"></div>
+      <div id="proj-fields" style="display:none">
+        <div class="ib-row">
+          <div class="ib-fld"><label id="proj-lbl">Jira project</label>
+            <select class="ib-sel" id="sel-proj" onchange="onProjChange()"><option value="" disabled selected>Choose a project</option></select>
+          </div>
+          <div class="ib-fld"><label>Sprint <span id="active-badge" style="display:none;background:var(--ib-greendim);color:var(--ib-green);font-size:10px;font-weight:700;padding:1px 7px;border-radius:3px"></span></label>
+            <select class="ib-sel" id="sel-sprint" disabled><option value="">All sprints</option></select>
+          </div>
+          <div class="ib-fld"><label>Fix version</label>
+            <select class="ib-sel" id="sel-ver" disabled><option value="">Any version</option></select>
+          </div>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--ib-muted);margin-top:4px">
+        <input type="checkbox" id="use-jql" onchange="toggleJql()" style="accent-color:var(--ib-green)"> Override with custom JQL
+      </label>
+      <div id="jql-box" style="display:none;margin-top:8px">
+        <textarea class="ib-input" id="jql-text" rows="2" placeholder='project = "SPT" AND sprint in openSprints() AND status = Done' style="resize:vertical;font-family:var(--ib-mono);font-size:12px"></textarea>
+      </div>
+    </div>
+    <div class="ib-card">
+      <div class="ib-step"><div class="ib-stepnum">2</div><div class="ib-steplbl">Filters</div></div>
+      <div class="ib-row">
+        <div class="ib-fld"><label>Status</label>
+          <select class="ib-sel" id="j-status"><option value="done">Done / Resolved / Closed</option><option value="released">Released</option><option value="all">All statuses</option></select>
+        </div>
+        <div class="ib-fld"><label>Issue type</label>
+          <select class="ib-sel" id="j-type"><option value="all">All types</option><option value="bug">Bugs only</option><option value="feature">Features &amp; Stories</option><option value="no-epic">Exclude Epics</option></select>
+        </div>
+        <div class="ib-fld"><label>Max</label>
+          <select class="ib-sel" id="j-max"><option value="20">20</option><option value="50" selected>50</option><option value="100">100</option></select>
+        </div>
+      </div>
+      <div class="ib-row">
+        <div class="ib-fld"><label>Updated from</label><input type="date" class="ib-input" id="j-from" style="color-scheme:dark"></div>
+        <div class="ib-fld"><label>Updated to</label><input type="date" class="ib-input" id="j-to" style="color-scheme:dark"></div>
+        <button class="ib-btn ib-primary" id="fetch-btn" onclick="fetchJira()" style="flex-shrink:0;padding:8px 20px;font-size:13px">Fetch issues →</button>
+      </div>
+      <div class="ib-err" id="fetch-err"></div>
+    </div>
+  </div>
+
+  <!-- IMPORT SECTION -->
+  <div id="sec-import" style="display:none">
+    <div class="ib-card">
+      <div class="ib-step"><div class="ib-stepnum" id="sn-imp">1</div><div class="ib-steplbl">Import Jira export</div></div>
+      <div id="drop-zone" class="ib-drop" onclick="document.getElementById('file-in').click()"
+           ondrop="onDrop(event)" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')">
+        <input type="file" id="file-in" accept=".csv,.xlsx,.xls" style="display:none" onchange="onFileSel(event)">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" style="margin:0 auto 10px;display:block">
+          <rect width="36" height="36" rx="8" fill="var(--ib-greendim)"/>
+          <path d="M18 8v14M11 15l7-7 7 7M8 26h20" stroke="var(--ib-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div style="font-size:14px;font-weight:600;color:var(--ib-text);margin-bottom:5px">Drop your Jira export here</div>
+        <div style="font-size:12px;color:var(--ib-muted)">or click to browse · <strong style="color:var(--ib-greentext)">.csv</strong> · <strong style="color:var(--ib-greentext)">.xlsx</strong> · <strong style="color:var(--ib-greentext)">.xls</strong></div>
+        <div style="font-size:11px;color:var(--ib-faint);margin-top:8px;line-height:1.6">Jira: Issues → Export → Export Excel CSV (all fields)<br>Auto-detects: Issue Key, Summary, Type, Status, Priority, Fix Version, Assignee</div>
+      </div>
+      <div class="ib-loading" id="imp-load" style="display:none"><div class="ib-spinner"></div>Parsing file…</div>
+      <div class="ib-err" id="imp-err"></div>
+      <div id="imp-summary" style="display:none">
+        <div class="ib-pill">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect width="16" height="16" rx="3" fill="var(--ib-greendim)"/><path d="M4 5h8M4 8h8M4 11h5" stroke="var(--ib-green)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span style="font-size:12px;color:var(--ib-greentext);font-weight:600;flex:1" id="imp-fname"></span>
+          <span style="font-size:11px;color:var(--ib-muted)" id="imp-meta"></span>
+          <button onclick="resetImport()" style="background:none;border:none;color:var(--ib-faint);cursor:pointer;font-size:15px;line-height:1;padding:0 3px">✕</button>
+        </div>
+        <div class="ib-row">
+          <div class="ib-fld"><label id="ip-lbl">Project key</label>
+            <select class="ib-sel" id="ip-proj" onchange="applyImpFilters()"><option value="">All projects</option></select>
+          </div>
+          <div class="ib-fld"><label id="iv-lbl">Fix version</label>
+            <select class="ib-sel" id="ip-ver" onchange="applyImpFilters()"><option value="">All versions</option></select>
+          </div>
+        </div>
+        <div class="ib-row">
+          <div class="ib-fld"><label>Status</label>
+            <select class="ib-sel" id="ip-status" onchange="applyImpFilters()"><option value="done">Done / Resolved / Closed</option><option value="all">All statuses</option></select>
+          </div>
+          <div class="ib-fld"><label>Issue type</label>
+            <select class="ib-sel" id="ip-type" onchange="applyImpFilters()"><option value="all">All types</option><option value="bug">Bugs only</option><option value="feature">Features &amp; Stories</option><option value="no-epic">Exclude Epics</option></select>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center">
+          <span style="font-size:12px;color:var(--ib-muted)" id="imp-count"></span>
+          <button onclick="resetImport()" style="background:none;border:none;color:var(--ib-muted);cursor:pointer;font-size:12px;text-decoration:underline;padding:0;margin-left:auto">Upload different file</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ISSUES (shared) -->
+  <div id="sec-issues" style="display:none">
+    <div class="ib-card">
+      <div class="ib-step"><div class="ib-stepnum" id="sn-issues">3</div><div class="ib-steplbl">Select issues</div></div>
+      <div class="ib-metrics">
+        <div class="ib-metric"><div class="ib-mval" id="mx-total" style="color:var(--ib-green)">0</div><div class="ib-mlbl">Total</div></div>
+        <div class="ib-metric"><div class="ib-mval" id="mx-bugs"  style="color:var(--ib-red)">0</div><div class="ib-mlbl">Bugs</div></div>
+        <div class="ib-metric"><div class="ib-mval" id="mx-feat"  style="color:var(--ib-green)">0</div><div class="ib-mlbl">Features</div></div>
+        <div class="ib-metric"><div class="ib-mval" id="mx-hi"    style="color:var(--ib-amber)">0</div><div class="ib-mlbl">High priority</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <input type="text" class="ib-input" id="issue-search" placeholder="Search issues…" style="max-width:200px;padding:6px 10px;font-size:12px" oninput="renderList()">
+        <span style="font-size:12px;color:var(--ib-muted);margin-left:auto" id="sel-count">0 / 0</span>
+        <button class="ib-btn ib-secondary" style="font-size:11px;padding:5px 10px" onclick="selAll(true)">All</button>
+        <button class="ib-btn ib-ghost"     style="font-size:11px;padding:5px 10px" onclick="selAll(false)">Clear</button>
+      </div>
+      <div class="ib-issues" id="issue-list"></div>
+    </div>
+  </div>
+
+  <!-- GENERATE (shared) -->
+  <div id="sec-gen" style="display:none">
+    <div class="ib-card">
+      <div class="ib-step"><div class="ib-stepnum" id="sn-gen">4</div><div class="ib-steplbl">Generate release notes</div></div>
+      <div class="ib-stylebadge">
+        <svg width="12" height="12" viewBox="0 0 36 36" fill="none"><polygon points="18,2 34,18 18,34 2,18" fill="#1AB87C"/><polygon points="18,9 27,18 18,27 9,18" fill="#0F1612"/><polygon points="18,14 22,18 18,22 14,18" fill="#1AB87C"/></svg>
+        <span style="color:var(--ib-greentext);font-weight:600">Infoblox house style applied</span>
+        <span style="color:var(--ib-muted)">· Category: Title · Summary · Prose · "For more information, see…"</span>
+      </div>
+      <div class="ib-row">
+        <div class="ib-fld"><label>Version / release name</label>
+          <input type="text" class="ib-input" id="ver-name" placeholder="e.g. NIOS-X v4.1 — May 2026">
+        </div>
+        <div class="ib-fld"><label>Output format</label>
+          <select class="ib-sel" id="out-fmt">
+            <option value="infoblox">Infoblox plain text (default)</option>
+            <option value="markdown">Markdown</option>
+            <option value="html">HTML</option>
+            <option value="confluence">Confluence wiki markup</option>
+            <option value="json">JSON (structured)</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="ib-fld"><label>Extra instructions (optional)</label>
+          <input type="text" class="ib-input" id="extra" placeholder="e.g. Group under NIOS-X, note deprecated features, focus on security…">
+        </div>
+      </div>
+      <button class="ib-btn ib-primary ib-full" id="gen-btn" onclick="doGenerate()">Generate release notes →</button>
+      <div class="ib-err" id="gen-err"></div>
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div id="sec-out" style="display:none">
+    <div class="ib-card glow">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:7px;height:7px;border-radius:2px;background:var(--ib-green)"></div>
+          <span style="font-size:11px;font-weight:700;color:var(--ib-greentext);text-transform:uppercase;letter-spacing:.08em;font-family:'Barlow Condensed',sans-serif" id="out-label">Output</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="ib-btn ib-secondary" style="font-size:11px;padding:5px 10px" id="copy-btn" onclick="doCopy()">Copy</button>
+          <button class="ib-btn ib-secondary" style="font-size:11px;padding:5px 10px" onclick="doGenerate()">Regenerate</button>
+        </div>
+      </div>
+      <pre class="ib-out-pre" id="out-pre"></pre>
+    </div>
+  </div>
+
+  <div style="border-top:1px solid var(--ib-border);margin-top:1rem;padding-top:.75rem;display:flex;align-items:center;gap:7px">
+    <svg width="12" height="12" viewBox="0 0 36 36" fill="none"><polygon points="18,2 34,18 18,34 2,18" fill="#1AB87C" opacity=".6"/><polygon points="18,9 27,18 18,27 9,18" fill="#090E0C"/><polygon points="18,14 22,18 18,22 14,18" fill="#1AB87C" opacity=".6"/></svg>
+    <span style="font-size:11px;color:var(--ib-faint)">Infoblox Release Notes Generator · Jira + Claude AI</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+let mode = 'jira';
+let allIssues = [], selectedKeys = new Set(), allRaw = [];
+
+function $id(id) { return document.getElementById(id); }
+function show(id) { const e=$id(id); if(e) e.style.display=''; }
+function hide(id) { const e=$id(id); if(e) e.style.display='none'; }
+function showErr(id,msg) { const e=$id(id); if(!e)return; e.textContent='⚠ '+msg; e.style.display='block'; }
+function hideErr(id) { const e=$id(id); if(!e)return; e.textContent=''; e.style.display='none'; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function setMode(m) {
+  mode = m;
+  $id('tab-jira').classList.toggle('on', m==='jira');
+  $id('tab-import').classList.toggle('on', m==='import');
+  $id('sec-jira').style.display   = m==='jira'   ? '' : 'none';
+  $id('sec-import').style.display = m==='import' ? '' : 'none';
+  hide('sec-issues'); hide('sec-gen'); hide('sec-out');
+  allIssues=[]; selectedKeys=new Set();
+  $id('sn-issues').textContent = m==='jira' ? '3' : '2';
+  $id('sn-gen').textContent    = m==='jira' ? '4' : '3';
+  if (m==='jira' && $id('sel-proj').children.length <= 1) loadProjects();
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function callClaude(system, userMsg, withMcp=true) {
+  const body = { model:'claude-sonnet-4-20250514', max_tokens:1000, system, messages:[{role:'user',content:userMsg}] };
+  if (withMcp) body.mcp_servers = [{type:'url',url:'https://mcp.atlassian.com/v1/mcp',name:'atlassian'}];
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('API error '+res.status);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return (data.content||[]).map(b=>b.type==='text'?b.text:(b.content?.[0]?.text||'')).join('');
+}
+
+function parseArr(raw) {
+  const m = raw.match(/\[[\s\S]*?\]/);
+  try { return m ? JSON.parse(m[0]) : null; } catch { return null; }
+}
+
+// ── Jira ──────────────────────────────────────────────────────────────────────
+async function loadProjects() {
+  show('proj-load'); hideErr('proj-err'); hide('proj-fields');
+  try {
+    const raw = await callClaude(
+      'Use the Jira MCP to list all accessible projects. Return ONLY a JSON array: [{"key":"PROJ","name":"Project Name","id":"10001"},...]. No markdown.',
+      'List all Jira projects I have access to.'
+    );
+    const list = parseArr(raw);
+    if (!list||!list.length) throw new Error('No projects returned. Connect Atlassian in Settings → Integrations, or use Import mode.');
+    const sel = $id('sel-proj');
+    list.forEach(p => sel.add(new Option(`${p.key} — ${p.name}`, p.key)));
+    $id('proj-lbl').textContent = `Jira project — ${list.length} available`;
+    show('proj-fields');
+  } catch(e) {
+    showErr('proj-err', e.message + ' — or switch to Import CSV/Excel mode ↑');
+  } finally { hide('proj-load'); }
+}
+
+async function onProjChange() {
+  const proj = $id('sel-proj').value;
+  if (!proj) return;
+  markDone('sn1');
+  $id('ver-name').value = proj + ' — Release';
+  const spSel = $id('sel-sprint'), verSel = $id('sel-ver');
+  spSel.innerHTML  = '<option value="">All sprints</option>';
+  verSel.innerHTML = '<option value="">Any version</option>';
+  spSel.disabled = true; verSel.disabled = true;
+
+  callClaude(
+    'Return ONLY a JSON array of sprints: [{"id":"1","name":"Sprint 12","state":"active"},...]. state: active|closed|future.',
+    `List sprints for Jira project "${proj}".`
+  ).then(raw => {
+    const list = parseArr(raw)||[];
+    list.forEach(s => { spSel.add(new Option((s.state==='active'?'★ ':s.state==='future'?'○ ':'')+s.name, s.name)); });
+    const active = list.find(s=>s.state==='active');
+    if (active) { const b=$id('active-badge'); b.textContent='● '+active.name; show('active-badge'); }
+    spSel.disabled = false;
+  }).catch(()=>{ spSel.disabled=false; });
+
+  callClaude(
+    'Return ONLY a JSON array of fix versions: [{"id":"1","name":"v2.0","released":true,"releaseDate":"2026-01-01"},...]. releaseDate can be null.',
+    `List fix versions for Jira project "${proj}".`
+  ).then(raw => {
+    const list = parseArr(raw)||[];
+    list.forEach(v => { verSel.add(new Option(v.name+(v.released?' ✓':'')+(v.releaseDate?' · '+v.releaseDate:''), v.name)); });
+    verSel.disabled = false;
+  }).catch(()=>{ verSel.disabled=false; });
+}
+
+function toggleJql() { $id('jql-box').style.display = $id('use-jql').checked ? '' : 'none'; }
+
+async function fetchJira() {
+  const proj=$id('sel-proj').value, sprint=$id('sel-sprint').value, ver=$id('sel-ver').value;
+  const useJql=$id('use-jql').checked, jqlTxt=$id('jql-text').value.trim();
+  const statusF=$id('j-status').value, typeF=$id('j-type').value, maxI=$id('j-max').value;
+  const from=$id('j-from').value, to=$id('j-to').value;
+  if (!proj&&!useJql) { showErr('fetch-err','Select a project first.'); return; }
+
+  const btn=$id('fetch-btn');
+  btn.disabled=true; btn.innerHTML='<div class="ib-spinner"></div> Fetching…';
+  hideErr('fetch-err'); hide('sec-issues'); hide('sec-gen'); hide('sec-out');
+
+  let jql;
+  if (useJql) { jql=jqlTxt; }
+  else {
+    const p=[`project = "${proj}"`];
+    if (sprint)  p.push(`sprint = "${sprint}"`);
+    if (ver)     p.push(`fixVersion = "${ver}"`);
+    if (statusF==='done')     p.push(`status in ("Done","Resolved","Closed")`);
+    if (statusF==='released') p.push(`status = "Released"`);
+    if (typeF==='bug')     p.push(`issuetype = Bug`);
+    if (typeF==='feature') p.push(`issuetype in (Story,Feature,"New Feature",Improvement)`);
+    if (typeF==='no-epic') p.push(`issuetype != Epic`);
+    if (from) p.push(`updated >= "${from}"`); if (to) p.push(`updated <= "${to}"`);
+    jql = p.join(' AND ')+' ORDER BY created DESC';
+  }
+  try {
+    const raw = await callClaude(
+      `Use Jira MCP searchJiraIssuesUsingJql. Return ONLY a JSON array. Each: {"key":"PROJ-1","summary":"...","type":"Bug|Story|Task|Feature|Epic|Improvement","status":"...","assignee":"name or null","priority":"High|Medium|Low|null","description":"first 150 chars or null","fixVersion":"v or null"}. Limit ${maxI}.`,
+      `JQL: ${jql}`
+    );
+    const list = parseArr(raw);
+    if (!list||!list.length) throw new Error('No issues found. Try relaxing filters.');
+    loadIssues(list);
+  } catch(e) { showErr('fetch-err',e.message); }
+  finally { btn.disabled=false; btn.innerHTML='Fetch issues →'; }
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
+const COL_MAP = {
+  key:         ['issue key','key','id','ticket','issue id'],
+  summary:     ['summary','title','name','subject'],
+  type:        ['issue type','issuetype','type','kind'],
+  status:      ['status','state'],
+  priority:    ['priority','severity'],
+  assignee:    ['assignee','assigned to','owner'],
+  fixVersion:  ['fix version/s','fix version','fix versions','version','release','custom field (release)'],
+  description: ['description','details','body'],
+  project:     ['project key','project','project name'],
+};
+function findCol(hdrs, cands) {
+  const lc=hdrs.map(h=>(h||'').toLowerCase().trim());
+  for(const c of cands){const i=lc.indexOf(c);if(i!==-1)return hdrs[i];}
+  return null;
+}
+function rowsToIssues(rows,hdrs) {
+  const col={};
+  for(const[f,cs] of Object.entries(COL_MAP)) col[f]=findCol(hdrs,cs);
+  return rows.filter(r=>col.key?r[col.key]:true).map(r=>({
+    key:        col.key        ? String(r[col.key]||'').trim() : '',
+    summary:    col.summary    ? String(r[col.summary]||'').trim() : '',
+    type:       col.type       ? String(r[col.type]||'').trim() : 'Story',
+    status:     col.status     ? String(r[col.status]||'').trim() : '',
+    priority:   col.priority   ? String(r[col.priority]||'').trim() : '',
+    assignee:   col.assignee   ? String(r[col.assignee]||'').trim() : '',
+    fixVersion: col.fixVersion ? String(r[col.fixVersion]||'').trim() : '',
+    description:col.description? String(r[col.description]||'').slice(0,200).trim() : '',
+    project:    col.project    ? String(r[col.project]||'').trim() : '',
+  })).filter(r=>r.key||r.summary);
+}
+function parseFile(file) {
+  return new Promise((resolve,reject)=>{
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(ext==='csv'){
+      Papa.parse(file,{header:true,skipEmptyLines:true,
+        complete:r=>resolve({rows:r.data,headers:r.meta.fields||[]}),
+        error:e=>reject(new Error(e.message))});
+    } else if(ext==='xlsx'||ext==='xls'){
+      const reader=new FileReader();
+      reader.onload=e=>{
+        try{
+          const wb=XLSX.read(e.target.result,{type:'array'});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+          const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+          resolve({rows,headers:rows.length?Object.keys(rows[0]):[]});
+        }catch(err){reject(err);}
+      };
+      reader.onerror=()=>reject(new Error('File read failed'));
+      reader.readAsArrayBuffer(file);
+    } else reject(new Error('Unsupported file type.'));
+  });
+}
+
+function onDrop(e){ e.preventDefault(); $id('drop-zone').classList.remove('over'); const f=e.dataTransfer.files[0]; if(f)handleImport(f); }
+function onFileSel(e){ if(e.target.files[0])handleImport(e.target.files[0]); }
+
+async function handleImport(file) {
+  show('imp-load'); hideErr('imp-err'); hide('imp-summary');
+  allRaw=[]; allIssues=[]; selectedKeys=new Set();
+  hide('sec-issues'); hide('sec-gen'); hide('sec-out');
+  try {
+    const{rows,headers}=await parseFile(file);
+    if(!rows.length) throw new Error('File is empty.');
+    const parsed=rowsToIssues(rows,headers);
+    if(!parsed.length) throw new Error("No valid issues found. Ensure file has 'Issue Key' and 'Summary' columns.");
+    allRaw=parsed;
+
+    const projs=[...new Set(parsed.map(i=>i.project||(i.key?i.key.split('-')[0]:'')).filter(Boolean))];
+    const vers=[...new Set(parsed.map(i=>i.fixVersion).filter(Boolean))];
+
+    const pSel=$id('ip-proj'); pSel.innerHTML='<option value="">All projects</option>';
+    projs.forEach(p=>pSel.add(new Option(p,p)));
+    if(projs.length===1){pSel.value=projs[0];$id('ver-name').value=projs[0]+' — Release';}
+    $id('ip-lbl').textContent=`Project key — ${projs.length} detected`;
+
+    const vSel=$id('ip-ver'); vSel.innerHTML='<option value="">All versions</option>';
+    vers.forEach(v=>vSel.add(new Option(v,v)));
+    if(vers.length===1)vSel.value=vers[0];
+    $id('iv-lbl').textContent=`Fix version — ${vers.length} detected`;
+
+    $id('imp-fname').textContent=file.name;
+    $id('imp-meta').textContent=`${parsed.length} issues · ${projs.length} project${projs.length!==1?'s':''} · ${vers.length} version${vers.length!==1?'s':''}`;
+    hide('drop-zone'); show('imp-summary'); markDone('sn-imp');
+    applyImpFilters();
+  } catch(e){ showErr('imp-err',e.message); }
+  finally { hide('imp-load'); }
+}
+
+function applyImpFilters(){
+  const proj=$id('ip-proj').value, ver=$id('ip-ver').value;
+  const statusF=$id('ip-status').value, typeF=$id('ip-type').value;
+  let f=allRaw;
+  if(proj) f=f.filter(i=>(i.project||(i.key?i.key.split('-')[0]:''))===proj);
+  if(ver)  f=f.filter(i=>i.fixVersion===ver);
+  if(statusF==='done') f=f.filter(i=>{const l=(i.status||'').toLowerCase();return l.includes('done')||l.includes('resolv')||l.includes('close');});
+  if(typeF==='bug')    f=f.filter(i=>(i.type||'').toLowerCase().includes('bug'));
+  if(typeF==='feature')f=f.filter(i=>{const l=(i.type||'').toLowerCase();return l.includes('story')||l.includes('feature')||l.includes('improvement');});
+  if(typeF==='no-epic')f=f.filter(i=>!(i.type||'').toLowerCase().includes('epic'));
+  $id('imp-count').textContent=`${f.length} issues loaded`;
+  loadIssues(f);
+}
+
+function resetImport(){
+  allRaw=[]; allIssues=[]; selectedKeys=new Set();
+  hide('imp-summary'); show('drop-zone');
+  $id('file-in').value='';
+  hide('sec-issues'); hide('sec-gen'); hide('sec-out');
+  $id('sn-imp').textContent='1'; $id('sn-imp').classList.remove('done');
+}
+
+// ── Issues list ───────────────────────────────────────────────────────────────
+function loadIssues(issues){
+  allIssues=issues; selectedKeys=new Set(issues.map(i=>i.key));
+  renderList(); updateMetrics();
+  show('sec-issues'); show('sec-gen');
+}
+
+function typeMeta(t=''){
+  const l=t.toLowerCase();
+  if(l.includes('bug'))return{c:'red',lbl:'Bug'};
+  if(l.includes('epic'))return{c:'teal',lbl:'Epic'};
+  if(l.includes('story'))return{c:'blue',lbl:'Story'};
+  if(l.includes('feature')||l.includes('improvement'))return{c:'green',lbl:l.includes('feature')?'Feature':'Improvement'};
+  return{c:'muted',lbl:t||'Task'};
+}
+function statusC(s=''){const l=s.toLowerCase();return l.includes('done')||l.includes('resolv')||l.includes('close')?'green':l.includes('progress')||l.includes('review')?'amber':'muted';}
+function priorityC(p=''){const l=p.toLowerCase();return l==='highest'||l==='critical'?'red':l==='high'?'amber':l==='low'||l==='lowest'?'blue':null;}
+
+function renderList(){
+  const q=($id('issue-search').value||'').toLowerCase();
+  const filtered=allIssues.filter(i=>!q||i.key.toLowerCase().includes(q)||i.summary.toLowerCase().includes(q));
+  const list=$id('issue-list');
+  if(!filtered.length){list.innerHTML='<div class="ib-noissues">No issues match your filters.</div>';return;}
+  list.innerHTML=filtered.map(issue=>{
+    const tm=typeMeta(issue.type),sc=statusC(issue.status),pc=priorityC(issue.priority),sel=selectedKeys.has(issue.key);
+    return `<div class="ib-issue${sel?' sel':''}" onclick="toggleIssue('${esc(issue.key).replace(/'/g,"\\'")}')">
+      <input type="checkbox" ${sel?'checked':''} onclick="event.stopPropagation();toggleIssue('${esc(issue.key).replace(/'/g,"\\'")}');" style="accent-color:var(--ib-green);width:auto;flex-shrink:0">
+      <span class="ib-ikey">${esc(issue.key)}</span>
+      <span class="ib-isum">${esc(issue.summary)}</span>
+      <div class="ib-ibadges">
+        <span class="ib-badge bg-${tm.c}">${tm.lbl}</span>
+        ${pc?`<span class="ib-badge bg-${pc}">${esc(issue.priority)}</span>`:''}
+        <span class="ib-badge bg-${sc}">${esc(issue.status||'—')}</span>
+      </div>
+    </div>`;
+  }).join('');
+  $id('sel-count').textContent=`${selectedKeys.size} / ${allIssues.length}`;
+  const sn=$id('sn-issues');
+  if(selectedKeys.size>0){sn.textContent='✓';sn.classList.add('done');}
+  else{sn.textContent=mode==='jira'?'3':'2';sn.classList.remove('done');}
+}
+
+function toggleIssue(key){ selectedKeys.has(key)?selectedKeys.delete(key):selectedKeys.add(key); renderList(); }
+function selAll(v){ if(v)allIssues.forEach(i=>selectedKeys.add(i.key)); else selectedKeys.clear(); renderList(); }
+
+function updateMetrics(){
+  const i=allIssues;
+  $id('mx-total').textContent=i.length;
+  $id('mx-bugs').textContent=i.filter(x=>(x.type||'').toLowerCase().includes('bug')).length;
+  $id('mx-feat').textContent=i.filter(x=>{const l=(x.type||'').toLowerCase();return l.includes('story')||l.includes('feature')||l.includes('improvement');}).length;
+  $id('mx-hi').textContent=i.filter(x=>{const p=(x.priority||'').toLowerCase();return p==='high'||p==='highest'||p==='critical';}).length;
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function doGenerate(){
+  const sel=allIssues.filter(i=>selectedKeys.has(i.key));
+  if(!sel.length){showErr('gen-err','Select at least one issue.');return;}
+  const verName=$id('ver-name').value.trim();
+  const fmt=$id('out-fmt').value;
+  const extra=$id('extra').value.trim();
+  const btn=$id('gen-btn');
+  btn.disabled=true; btn.innerHTML='<div class="ib-spinner spinner-lg"></div> Writing release notes…';
+  hideErr('gen-err'); hide('sec-out');
+
+  const fmts={
+    infoblox:'Use the Infoblox house style exactly as described.',
+    markdown:'Output as Markdown. Use the Infoblox prose style.',
+    html:'Output as clean semantic HTML. No inline styles.',
+    confluence:'Output as Confluence wiki markup. h2. for section headings.',
+    json:'Output ONLY JSON: {"version":"...","date":"...","entries":[{"title":"Category: Title","summary":"one sentence","detail":"prose ending with For more information, see [Topic]."}]}'
+  };
+  const issueLines=sel.map(i=>`- Summary: ${i.summary}${i.type?`\n  Type: ${i.type}`:''}${i.description?`\n  Description: ${i.description}`:''}${i.fixVersion?`\n  Fix Version: ${i.fixVersion}`:''}`).join('\n');
+
+  const SYSTEM=`You are a technical writer at Infoblox writing release notes in the exact Infoblox house style.
+
+STYLE RULES:
+1. Each feature entry:
+   * [Category]: [Feature Title]:
+   [blank line]
+   [One-sentence capability summary — present tense, NO "now"]
+   [Detail paragraph starting with product name + "now supports/provides/includes". Ends with "For more information, see [Topic Name]."]
+
+2. Title: "* Category: Feature Title:" — title case, colons required
+3. Summary: short declarative, present tense, no "now"
+4. Detail: "now supports/provides/includes/allows" + what + where (exact UI page names) + benefit. End: "For more information, see [Topic]."
+5. Expand acronyms first use. Include version numbers when relevant. NO ticket keys in output. Active voice.
+6. Blank line between title and body. Blank line between entries.
+
+FORMAT: ${fmts[fmt]}
+${extra?'EXTRA: '+extra:''}
+Output ONLY the entries. No preamble.
+
+EXAMPLE:
+* NIOS-X: Automatic Server Right-Sizing:
+
+NIOS-X supports automatic server right-sizing.
+NIOS-X now supports automatic server right-sizing, scaling servers to the next Infoblox-recommended size when capacity thresholds are exceeded multiple times within a monthly cycle, ensuring servers remain within supported performance limits. For more information, see Automatic Server Right-Sizing.`;
+
+  try {
+    const raw=await callClaude(SYSTEM,`Write release notes for: "${verName||'this release'}"\n\nIssues:\n${issueLines}`,false);
+    if(!raw.trim()) throw new Error('Empty response. Try again.');
+    $id('out-pre').textContent=raw.trim();
+    $id('out-label').textContent=`Output · ${fmt}`;
+    show('sec-out');
+    $id('sec-out').scrollIntoView({behavior:'smooth',block:'start'});
+  } catch(e){ showErr('gen-err',e.message); }
+  finally { btn.disabled=false; btn.innerHTML='Generate release notes →'; }
+}
+
+function doCopy(){
+  navigator.clipboard.writeText($id('out-pre').textContent).then(()=>{
+    const b=$id('copy-btn'); b.textContent='✓ Copied';
+    setTimeout(()=>b.textContent='Copy',2000);
+  });
+}
+
+function markDone(id){ const e=$id(id);if(!e)return;e.textContent='✓';e.classList.add('done'); }
+
+// Init — load Jira projects on mount
+loadProjects();
+</script>
